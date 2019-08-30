@@ -1,7 +1,7 @@
 import  sqlalchemy
 from sqlalchemy import  create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column,Integer,String,ForeignKey #区分大小写
+from sqlalchemy import Column,Integer,String,ForeignKey,DateTime #区分大小写
 from sqlalchemy.orm import sessionmaker,relationship
 from datetime import datetime
 
@@ -12,21 +12,21 @@ HOSTNAME = '127.0.0.1'
 # 端口号
 PORT = '3306'
 # 连接数据库的名字
-DATABASE = 'image_data'
+DATABASE = 'book_manager'
 # 数据库的账号和密码
 USERNAME = 'root'
 PASSWORD = 'zhy210320'
 # 创建数据库引擎
-DB_URI = 'mysql+pymysql://{username}:{pwd}@{host}:{port}/{db}?charset=utf8'\
+DB_URI = 'mysql+mysqlconnector://{username}:{pwd}@{host}:{port}/{db}?charset=utf8'\
     .format(username =USERNAME,pwd = PASSWORD,host = HOSTNAME,port=PORT,db = DATABASE)
-engine = create_engine(DB_URI,encoding='utf-8',echo=True)
+engine = create_engine(DB_URI,encoding='utf-8',echo=False)
 
 
 # 2. 生成orm基类
 Base = declarative_base()
 # 创建orm表格
 class BaseInfo(Base):
-    __tablename__ = 'BaseInfo'
+    __tablename__ = 'baseinfo'
     id = Column(String(22),primary_key=True,nullable=False,)
     file_name = Column(String(50),nullable=False)
     modality = Column(String(20))
@@ -36,13 +36,13 @@ class BaseInfo(Base):
     create_time = Column(DateTime,default=datetime.now)
     update_time = Column(DateTime,onupdate=datetime.now,default=datetime.now)
     patient_id = Column(Integer,ForeignKey('patient.id'))
-    patient = relationship('Patient_Info', back_populates='BaseInfo')
+    patient = relationship('Patient', back_populates='BaseInform')
     image_id = Column(Integer,ForeignKey('image_para.id'))
-    image_para = relationship('Image_Parameter',back_populates='BaseInfo')
+    image_para = relationship('Image_Parameter',back_populates='BaseInform')
 
 
 class Patient(Base):
-    __tablename__ = 'Patient_Info'
+    __tablename__ = 'patient'
     id = Column(Integer,primary_key=True)
     patient_id = Column(Integer)
     patient_age = Column(Integer)
@@ -50,10 +50,28 @@ class Patient(Base):
     patient_sex = Column(Integer)
     patient_size = Column(Integer)
     patient_weight = Column(Integer)
-    base_info = relationship('BaseInfo',back_populates='Patient_Info')
+    base_info = relationship('BaseInfo',back_populates='patient')
 
 
+class Image_Parameter(Base):
+    __tablename__ = 'image_para'
+    id = Column(Integer,primary_key=True)
+    study_id = Column(Integer)
+    study_date = Column(String(20))
+    study_time = Column(String(20))
+    dimsize = Column(Integer)
+    origin = Column(Integer)
+    spacing = Column(Integer)
+    offset = Column(Integer)
+    window_width = Column(Integer)
+    window_center = Column(Integer)
+    institution_name = Column(String(50))
+    manufacturer = Column(String(50))
+    image_address = Column(String(50))
+    base_info = relationship('BaseInfo', back_populates='image_para')
 
+
+Base.metadata.create_all(engine)  # 创建表结构
 
 
 
