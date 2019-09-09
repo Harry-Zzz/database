@@ -9,6 +9,7 @@ import vtk
 from vtkmodules.util import numpy_support
 import cv2
 import io
+from natsort import natsorted
 
 
 
@@ -16,18 +17,14 @@ PathDicom = "E:/Dicom/test/DicomResource"  # 与python文件同一个目录下�
 lstFilesDCM = []
 DcmName = []
 for dirName, subdirList, fileList in sorted(os.walk(PathDicom)):
+    fileList = natsorted(fileList)
     for filename in fileList:
         if ".dcm" in filename.lower():  # 判断文件是否为dicom文件
-            # print(filename)
             lstFilesDCM.append(os.path.join(dirName, filename))  # 加入到列表中
             DcmName.append(filename)
-print(DcmName)
-# print(dirName)
-# print(subdirList)
-# print(fileList)
-'''
-RefDs = pydicom.read_file(lstFilesDCM[0])
 
+'''
+RefDs = pydicom.read_file(lstFilesDCM[0],force=True)
 reader = sitk.ImageSeriesReader()
 dicom_names = reader.GetGDCMSeriesFileNames(PathDicom)
 reader.SetFileNames(dicom_names)
@@ -37,19 +34,37 @@ row = RefDs.Rows
 ConstOrigin = image.GetOrigin()
 ConstPixelSpacing = image.GetSpacing()
 ConstPixelDims = (int(row), int(columns), len(lstFilesDCM))
+'''
+gap = len(DcmName) - 1
+file_one = pydicom.read_file(lstFilesDCM[0],force=True)
+z_one = file_one.ImagePositionPatient[2]
+file_tow = pydicom.read_file(lstFilesDCM[gap],force=True)
+z_tow = file_tow.ImagePositionPatient[2]
+columns = file_one.Columns
+row = file_one.Rows
+ConstPixelDims = (int(row), int(columns), len(lstFilesDCM))
+if z_one > z_tow:
+    slice_gap = (z_one - z_tow)/gap
+    ConstOrigin = (file_tow.ImagePositionPatient[0],file_tow.ImagePositionPatient[1],file_tow.ImagePositionPatient[2])
+    ConstPixelSpacing = (float(file_tow.PixelSpacing[0]), float(file_tow.PixelSpacing[1]), float(slice_gap))
+else:
+    slice_gap = (z_tow - z_one)/gap
+    ConstOrigin = (file_one.ImagePositionPatient[0],file_one.ImagePositionPatient[1],file_one.ImagePositionPatient[2])
+    ConstPixelSpacing = (float(file_one.PixelSpacing[0]), float(file_one.PixelSpacing[1]), float(slice_gap))
+
 image_1 = int(ConstPixelDims[0]//2)
 image_2 = int(ConstPixelDims[1]//2)
 image_3 = int(ConstPixelDims[2]//2)
 x = numpy.arange(0.0, (ConstPixelDims[0] + 1) * ConstPixelSpacing[0],ConstPixelSpacing[0])  # 0到（第一个维数加一*像素间的间隔），步长为constpixelSpacing
 y = numpy.arange(0.0, (ConstPixelDims[1] + 1) * ConstPixelSpacing[1],ConstPixelSpacing[1])  #
 z = numpy.arange(0.0, (ConstPixelDims[2] + 1) * ConstPixelSpacing[2],ConstPixelSpacing[2])  #
-ArrayDicom = numpy.zeros(ConstPixelDims, dtype=RefDs.pixel_array.dtype)
+ArrayDicom = numpy.zeros(ConstPixelDims, dtype=file_one.pixel_array.dtype)
 
 # 遍历所有的dicom文件，读取图像数据，存放在numpy数组中
 for filenameDCM in lstFilesDCM:
-    ds = pydicom.read_file(filenameDCM)
+    ds = pydicom.read_file(filenameDCM,force=True)
     ArrayDicom[:, :, lstFilesDCM.index(filenameDCM)] = ds.pixel_array
-'''
+
 '''
 fig1 = pyplot.figure(dpi=300)
 pyplot.axes().set_aspect('equal','datalim')
@@ -109,8 +124,8 @@ pyplot.yticks([])
 pyplot.tight_layout(pad=0.5,w_pad=2)
 pyplot.subplots_adjust(wspace=0,hspace=0)
 # pyplot.savefig('E:\\Dicom\\test\\images\\'+'image.jpg')
-pyplot.savefig('E:\\Dicom\\test\\images\\'+'image.jpg')
 pyplot.show()
+
 '''
 '''
 pyplot.figure(dpi=300)
@@ -141,7 +156,7 @@ pyplot.savefig('E:\\Dicom\\test\\images\\'+'SagitalSlice'+'.jpg',bbox_inches='ti
 pyplot.show()
 
 '''
-'''
+
 Array_vtk = numpy_support.numpy_to_vtk(ArrayDicom.ravel('F'), deep=True, array_type=vtk.VTK_FLOAT)
 imagedata = vtk.vtkImageData()
 imagedata.SetOrigin(ConstOrigin)
@@ -170,7 +185,7 @@ def mip_x():
     vtk_data = image.GetPointData().GetScalars()
     arr = numpy_support.vtk_to_numpy(vtk_data).reshape(m[1], m[0])
     arr = (arr - numpy.min(arr)) / ((numpy.max(arr) - numpy.min(arr)) / 255)
-    width = RefDs.Columns
+    width = columns
     height = int(len(lstFilesDCM) * (ConstPixelSpacing[2] / ConstPixelSpacing[1]))
     dim = (width, height)
     resized = cv2.resize(numpy.rot90(arr, 1), dim, interpolation=cv2.INTER_AREA)
@@ -191,7 +206,7 @@ def mip_y():
     arr = numpy_support.vtk_to_numpy(vtk_data).reshape(m[1], m[0])
     arr = (arr - numpy.min(arr)) / ((numpy.max(arr) - numpy.min(arr)) / 255)
     width = int(len(lstFilesDCM) * (ConstPixelSpacing[2] / ConstPixelSpacing[0]))
-    height = RefDs.Rows
+    height = row
     dim = (width, height)
     resized = cv2.resize(numpy.rot90(arr, -1), dim, interpolation=cv2.INTER_AREA)
     # cv2.imwrite( path +'/'+ name +'.jpg', resized)
@@ -234,22 +249,5 @@ pyplot.xticks([])
 pyplot.yticks([])
 pyplot.tight_layout(pad=1.3,w_pad=2)
 pyplot.subplots_adjust(wspace=0,hspace=0)
-pyplot.savefig('E:\\Dicom\\test\\images\\'+'MIP_image.jpg')
+# pyplot.savefig('E:\\Dicom\\test\\images\\'+'MIP_image.jpg')
 pyplot.show()
-'''
-'''
-
-i = 0
-for i in range(len(lstFilesDCM())):
-    information = {}
-    information['filename'] = DcmName[0]
-    information['modality'] = RefDs.Modality
-    information['bodypart'] = RefDs.BodyPartExamined
-    information['address'] = dirName + '/' + DcmName[0]
-    information['type'] = 'dcm'
-    information['p_id'] = '1'
-    information['i_id'] = '1'
-
-    print(information)
-
-'''

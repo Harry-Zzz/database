@@ -4,9 +4,12 @@ from matplotlib import pyplot
 import numpy as np
 from vtkmodules.util import numpy_support
 import vtk
+import io
+import PIL
 
 
-image =sitk.ReadImage('G:/test/ART_VC_uCT/OUTPUT_0000_Volume.mhd')
+
+image =sitk.ReadImage('G:/test/Osirix_Data/TOUTATIX/3DPrint_CorCTA_ResultFiles/Diastole65_DownSmp2_SegLabels.mhd')
 image_arr = sitk.GetArrayFromImage(image)
 image_arr = image_arr.transpose()
 ConstOrigin = image.GetOrigin()
@@ -23,6 +26,66 @@ y = np.arange(0.0, (ConstPixelDims[1] + 1) * ConstPixelSpacing[1],ConstPixelSpac
 z = np.arange(0.0, (ConstPixelDims[2] + 1) * ConstPixelSpacing[2],ConstPixelSpacing[2])
 
 
+fig1 = pyplot.figure(dpi=300)
+pyplot.axes().set_aspect('equal','datalim')
+pyplot.set_cmap(pyplot.gray())
+pyplot.pcolormesh(x, y, np.flipud(image_arr[:, :, image_3]).transpose())  # 第三个维度表示现在展示的是第几层
+pyplot.axis('off')
+buffer_ = io.BytesIO()
+pyplot.savefig(buffer_,format='png')
+buffer_.seek(0)
+img1 = PIL.Image.open(buffer_)
+img_arr1 = np.asarray(img1)
+buffer_.close()
+
+fig2 = pyplot.figure(dpi=300)
+pyplot.axes().set_aspect('equal','datalim')
+pyplot.set_cmap(pyplot.gray())
+pyplot.pcolormesh(y, z, np.fliplr(np.rot90((image_arr[image_1, :, :]),3)))
+pyplot.axis('off')
+buffer_ = io.BytesIO()
+pyplot.savefig(buffer_,format='png')
+buffer_.seek(0)
+img2 = PIL.Image.open(buffer_)
+img_arr2 = np.asarray(img2)
+buffer_.close()
+
+fig3 = pyplot.figure(dpi=300)
+pyplot.axes().set_aspect('equal','datalim')
+pyplot.set_cmap(pyplot.gray())
+pyplot.pcolormesh(x, z, np.fliplr(np.rot90((image_arr[:, image_2, :]),3)))
+pyplot.axis('off')
+buffer_ = io.BytesIO()
+pyplot.savefig(buffer_,format='png')
+buffer_.seek(0)
+img3 = PIL.Image.open(buffer_)
+img_arr3 = np.asarray(img3)
+buffer_.close()
+
+pyplot.figure(figsize=(3,1),dpi=300)
+pyplot.subplot(131)
+pyplot.imshow(img_arr1)
+pyplot.title('AxialSlice',fontsize=4,y=0.9)
+pyplot.axis('off')
+pyplot.xticks([])
+pyplot.yticks([])
+pyplot.subplot(132)
+pyplot.imshow(img_arr2)
+pyplot.title('CoronalSlice',fontsize=4,y=0.9)
+pyplot.axis('off')
+pyplot.xticks([])
+pyplot.yticks([])
+pyplot.subplot(133)
+pyplot.imshow(img_arr3)
+pyplot.title('SagitalSlice',fontsize=4,y=0.9)
+pyplot.axis('off')
+pyplot.xticks([])
+pyplot.yticks([])
+pyplot.tight_layout(pad=0.5,w_pad=2)
+pyplot.subplots_adjust(wspace=0,hspace=0)
+# pyplot.savefig('E:\\Dicom\\test\\images\\'+'image.jpg')
+pyplot.show()
+'''
 pyplot.figure(dpi=300)
 pyplot.subplot(1,3,1)
 pyplot.axes().set_aspect('equal', 'datalim')
@@ -49,7 +112,7 @@ pyplot.pcolormesh(x, z, np.fliplr(np.rot90((image_arr[:, image_2, :]),3)))
 # pyplot.axis('off')
 # pyplot.savefig('G:/test/ART_VC_uCT/'+'SagitalSlice'+'.jpg')
 pyplot.show()
-
+'''
 
 
 Array_vtk = numpy_support.numpy_to_vtk(image_arr.ravel('F'), deep=True, array_type=vtk.VTK_FLOAT)
@@ -66,10 +129,7 @@ DirectionCosines_x = (0, 0, 1, 0, 1, 0, -1, 0, 0)
 DirectionCosines_y = (1, 0, 0, 0, 0, -1, 0, 1, 0)
 DirectionCosines_z = (1, 0, 0, 0, 1, 0, 0, 0, 1)
 
-Path = ('G:/test/ART_VC_uCT/')
-
-
-def mip_x(path,name):
+def mip_x():
     ImageSlab = vtk.vtkImageSlabReslice()
     ImageSlab.SetInputData(imagedata)
     ImageSlab.SetResliceAxesOrigin(center)
@@ -87,11 +147,11 @@ def mip_x(path,name):
     height = int(ConstPixelDims[2] * (ConstPixelSpacing[2] / ConstPixelSpacing[1]))
     dim = (width, height)
     resized = cv2.resize(np.rot90(arr, 1), dim, interpolation=cv2.INTER_AREA)
-    cv2.imwrite( path + name +'.jpg', resized)
-    return None
+    # cv2.imwrite( path + name +'.jpg', resized)
+    return resized
 
 
-def mip_y(path,name):
+def mip_y():
     ImageSlab = vtk.vtkImageSlabReslice()
     ImageSlab.SetInputData(imagedata)
     ImageSlab.SetResliceAxesOrigin(center)
@@ -109,11 +169,11 @@ def mip_y(path,name):
     height = ConstPixelDims[0]
     dim = (width, height)
     resized = cv2.resize(np.rot90(arr, -1), dim, interpolation=cv2.INTER_AREA)
-    cv2.imwrite( path + name +'.jpg', resized)
-    return None
+    # cv2.imwrite( path + name +'.jpg', resized)
+    return resized
 
 
-def mip_z(path,name):
+def mip_z():
     ImageSlab = vtk.vtkImageSlabReslice()
     ImageSlab.SetInputData(imagedata)
     ImageSlab.SetResliceAxesOrigin(center)
@@ -127,9 +187,26 @@ def mip_z(path,name):
     vtk_data = image.GetPointData().GetScalars()
     arr = numpy_support.vtk_to_numpy(vtk_data).reshape(m[1], m[0])
     arr = (arr - np.min(arr)) / ((np.max(arr) - np.min(arr)) / 255)
-    cv2.imwrite( path + name +'.jpg', arr)
-    return None
+    # cv2.imwrite( path + name +'.jpg', arr)
+    return arr
 
-mip_x(Path,'x')
-mip_y(Path,'y')
-mip_z(Path,'z')
+pyplot.figure(figsize=(3,1),dpi=300)
+pyplot.subplot(131)
+pyplot.imshow(np.rot90(mip_z(),2),cmap='gray')
+pyplot.title('AxialSlice_MIP',fontsize=4,y=1.1)
+pyplot.xticks([])
+pyplot.yticks([])
+pyplot.subplot(132)
+pyplot.imshow(mip_x(),cmap='gray')
+pyplot.title('CoronalSlice_MIP',fontsize=4,y=1.1)
+pyplot.xticks([])
+pyplot.yticks([])
+pyplot.subplot(133)
+pyplot.imshow(np.rot90(mip_y(),1),cmap='gray')
+pyplot.title('SagitalSlice_MIP',fontsize=4,y=1.1)
+pyplot.xticks([])
+pyplot.yticks([])
+pyplot.tight_layout(pad=1.3,w_pad=2)
+pyplot.subplots_adjust(wspace=0,hspace=0)
+# pyplot.savefig('E:\\Dicom\\test\\images\\'+'MIP_image.jpg')
+pyplot.show()

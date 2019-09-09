@@ -2,23 +2,23 @@ import pydicom
 from matplotlib import pylab
 
 
-filename = 'G:/test/Balerus_TB/351/X-RAY/20111004/1_1.dcm'
+filename = 'G:/test/Balerus_TB/51/X-RAY/20110128/1_1.dcm'
 ds = pydicom.dcmread(filename,force=True)
 # ds.dir()  # 查看病人所有信息字典keys
 # print(ds.PatientName)  # 查看病人名字
 # print(ds) # 查看病人所有信息字典， 如果出现某key对应值编码错误，先暂时跳过该key
 # print(len(ds))
-ds.PatientName = '0000'
-ds.save_as(filename)
+# ds.PatientName = '0000'
+# ds.save_as(filename)
 
 # 查看dicom对应图片值
 # print('*******************')
 # print(ds.pixel_array.shape)
 # print(ds.pixel_array)
 # 读取显示图片
-# pylab.imshow(ds.pixel_array, cmap=pylab.cm.gray)
-# pylab.axis('off')
-# pylab.show()
+pylab.imshow(ds.pixel_array, cmap=pylab.cm.gray)
+pylab.axis('off')
+pylab.show()
 
 
 '''
